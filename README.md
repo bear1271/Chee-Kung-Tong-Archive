@@ -4,6 +4,8 @@ An independent, offline discovery interface for the Chee Kung Tong Archive. Sear
 
 ## Open the archive
 
+**[Open the live archive](https://bear1271.github.io/Chee-Kung-Tong-Archive/)**
+
 Clone or download this repository and open [site/dist/index.html](site/dist/index.html) in a browser. On Windows, double-click [Open Archive.cmd](Open%20Archive.cmd). The catalogue and maps are included. Following a link to a library record requires internet access.
 
 The release contains 5,650 catalogue records. Search supports Chinese character-form matching while preserving archival spellings in record details and CSV. The timeline uses catalogue dates, including uncertain expressions when explicitly selected. Map points represent city-level catalogue associations. The two historical maps are independent reference images.
