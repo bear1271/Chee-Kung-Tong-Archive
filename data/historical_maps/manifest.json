@@ -1,0 +1,76 @@
+[
+  {
+    "id": "world-1913",
+    "title": "World.",
+    "display_title": "世界地图 · 1913",
+    "authors": [
+      "Rand McNally and Company",
+      "Schlitz Brewing Company"
+    ],
+    "map_date": 1913,
+    "publication_date": 1914,
+    "survey_period": null,
+    "revision_period": null,
+    "comparison_year": 1913,
+    "period_note": "图面标年 1913；所在图集出版于 1914。不能视为其他年份疆界的完整记录。",
+    "scale": "1:60,000,000",
+    "list_no": "3490.001",
+    "region": "world",
+    "geonames_ids": [],
+    "source_url": "https://www.davidrumsey.com/luna/servlet/detail/RUMSEY~8~1~36971~1200700:World-",
+    "georeferencer_url": "https://davidrumsey.oldmapsonline.org/id/3490.001",
+    "image": "assets/historical/world-1913.jpg",
+    "attribution": "David Rumsey Map Collection, David Rumsey Map Center, Stanford University Libraries",
+    "license_url": "https://creativecommons.org/licenses/by-nc-sa/3.0/",
+    "permissions_url": "https://www.davidrumsey.com/about/copyright-and-permissions",
+    "retrieved": "2026-10-29",
+    "local_georeferencing": "not_georeferenced",
+    "notes": "完整原图；不在未配准图像上叠加城市点。图中港口距离线不是致公堂通信路线。",
+    "width": 9255,
+    "height": 5981,
+    "sha256": "d80018e08d8fe62d1e275c9cbe59a25808b53484f19e6bb735005a5231920683",
+    "bytes": 11053625
+  },
+  {
+    "id": "sf-bay-1915",
+    "title": "San Francisco and vicinity, California. From Geological Survey atlas sheets surveyed in 1892-1913.",
+    "display_title": "旧金山及附近地区 · 1915",
+    "authors": [
+      "U.S. Geological Survey"
+    ],
+    "map_date": 1915,
+    "publication_date": 1915,
+    "survey_period": [
+      1892,
+      1913
+    ],
+    "revision_period": [
+      1913,
+      1914
+    ],
+    "comparison_year": 1915,
+    "period_note": "1915 年出版；底图测绘于 1892—1913 年，旧金山、奥克兰、阿拉米达、伯克利和里士满的地物修订于 1913—1914 年。不是 1915 年全区域同步实测。",
+    "scale": "1:62,500",
+    "list_no": "5742.000",
+    "region": "San Francisco Bay Area",
+    "geonames_ids": [
+      "5391959",
+      "5378538",
+      "5387428"
+    ],
+    "source_url": "https://www.davidrumsey.com/luna/servlet/detail/RUMSEY~8~1~31108~1150461:San-Francisco-and-vicinity,-Califor",
+    "georeferencer_url": "https://davidrumsey.oldmapsonline.org/id/5742.000",
+    "image": "assets/historical/sf-bay-1915.jpg",
+    "catalogue_reference": "University of California, Berkeley Library G4362.S22 1915.U5.",
+    "attribution": "David Rumsey Map Collection, David Rumsey Map Center, Stanford University Libraries",
+    "license_url": "https://creativecommons.org/licenses/by-nc-sa/3.0/",
+    "permissions_url": "https://www.davidrumsey.com/about/copyright-and-permissions",
+    "retrieved": "2026-10-29",
+    "local_georeferencing": "not_georeferenced",
+    "notes": "用于湾区地理背景查考；不据此确认公堂地址。原图未裁切、未改色。",
+    "width": 2782,
+    "height": 3985,
+    "sha256": "fa9a29e6d1b52c263a704c22b4666718036d49274f652f60554fbadcbfe67208",
+    "bytes": 2631722
+  }
+]

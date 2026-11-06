@@ -1,0 +1,7 @@
+{
+  "url": "https://download.geonames.org/export/dump/cities500.zip",
+  "retrieved": "2026-10-29",
+  "license": "CC BY 4.0",
+  "sha256": "d1e13678275b108d6dd0a5a35dcaee59ca2f0e3f3a6fa56a23c796f497ecebed",
+  "limits": "Modern population-filtered candidate source. Historical settlements may be absent; no match does not imply no place. Aliases taken from convenience alternatenames column; historical dates not supplied."
+}

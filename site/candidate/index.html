@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>致公堂档案 · 检索库</title><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="historical.css"><style>
+.script-picker { margin-left:auto; color:#fff; } .script-picker select { color:var(--ink); } header #about { margin-left:0; }
+:root { --muted:#52645e; --surface:#fffefa; --soft:#eef2ec; }
+[hidden] { display:none !important; }
+body { font-size:16px; line-height:1.55; }
+:where(button, summary, select, input) { scroll-margin-block:12px; }
+:where(button, summary, select, input):focus-visible { outline:3px solid #96691d; outline-offset:2px; }
+header { padding:14px max(20px,4%); gap:20px; }
+header h1 { font-size:25px; }
+header p { margin:0; font-size:13px; }
+header button { min-height:38px; white-space:nowrap; }
+main { display:block; max-width:1500px; padding:16px clamp(16px,4vw,56px) 30px; }
+summary { cursor:pointer; color:var(--green); font-weight:600; }
+.search-tools { border-bottom:1px solid var(--line); padding-bottom:12px; }
+.search-row { display:flex; gap:12px; align-items:end; }
+.search-row label { min-width:0; }
+.search-row .search { flex:1 1 240px; }
+.search-row input, .search-row select { min-height:42px; }
+.search-row select { max-width:100%; }
+.tool-panels { display:flex; flex-wrap:wrap; gap:6px 18px; align-items:flex-start; margin:6px 0; }
+.tool-panels details[open] { flex:1 0 100%; }
+.tool-panels summary { width:max-content; min-height:40px; display:flex; align-items:center; gap:6px; }
+.tool-panels summary::before { content:"▸"; }
+.tool-panels details[open]>summary::before { content:"▾"; }
+.search-options, .directory { background:var(--soft); padding:12px; border:0; border-radius:6px; }
+.search-options { display:flex; flex-wrap:wrap; gap:10px; align-items:end; }
+.search-options input[type=number], #timeline-anchor { width:94px; }
+.archive-nav { display:flex; gap:6px 18px; flex-wrap:wrap; padding:0; }
+.archive-nav button { padding:8px 2px; min-height:42px; }
+.directory #directory-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr)); gap:0 14px; max-height:215px; overflow:auto; }
+.directory-item { width:100%; min-height:44px; }
+.directory-item span:first-child { min-width:0; overflow-wrap:anywhere; }
+.directory>input { margin-top:6px; max-width:360px; }
+#more-directory { width:auto; margin-top:8px; }
+.active-filters { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.filter-chip { min-height:36px; background:var(--soft); border-radius:20px; font-size:13px; text-align:left; overflow-wrap:anywhere; }
+.filter-caption { font-size:13px; color:var(--muted); }
+.view-switch { display:none; }
+.archive-grid { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); align-items:start; gap:clamp(16px,3vw,34px); margin-top:16px; }
+.map-panel, .catalogue { min-width:0; }
+.map-heading { gap:8px; align-items:center; }
+.map-heading h2, .result-head h2 { font-size:20px; }
+.map-heading p { margin:3px 0 8px; overflow-wrap:anywhere; }
+#historical-open { min-height:40px; white-space:nowrap; }
+.map-wrap { background:#eff4f1; }
+#map { height:clamp(260px,42vh,410px); }
+.timeline { margin:8px 0 0; padding:10px 12px; border:1px solid var(--line); border-radius:6px; background:var(--soft); }
+.timeline-controls { display:flex; align-items:center; gap:6px 10px; flex-wrap:wrap; }
+.timeline-controls label { min-width:0; }
+.timeline-controls button, .timeline-controls select { min-height:40px; }
+#timeline-play { min-width:70px; background:var(--green); border-color:var(--green); color:white; }
+.timeline-slider { flex:1 1 100%; }
+.timeline-slider input { width:100%; margin:0; height:28px; padding:0; accent-color:var(--green); }
+.timeline-meta { display:flex; justify-content:space-between; gap:4px 12px; flex-wrap:wrap; align-items:baseline; }
+#timeline-status { font-weight:650; color:var(--ink); margin:4px 0; }
+#playback-settings { font-size:13px; }
+#playback-settings summary { padding:8px 0; }
+.timeline-settings { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:end; }
+.timeline-settings input[type=number] { width:94px; }
+.timeline-settings p { flex:1 0 100%; margin:0 0 3px; }
+.legend { font-size:13px; padding:8px 0; gap:4px 12px; }
+.legend .mixed { border-color:#a76a16; border-width:2px; }
+.catalogue { border-left:1px solid var(--line); padding:0 0 0 clamp(12px,2vw,25px); margin:0; }
+.result-head { gap:5px 12px; }
+#result-note { margin:6px 0 8px; }
+#name-evidence { max-height:360px; overflow:auto; border:1px solid var(--line); padding:10px; }
+.record { padding:12px 0; }
+.record-top { align-items:baseline; gap:4px 8px; }
+.record-title { flex:1 0 100%; font-size:17px; font-weight:650; overflow-wrap:anywhere; }
+.record .code { font-variant-numeric:tabular-nums; font-size:13px; }
+.record .hit-summary { background:var(--soft); padding:6px 8px; border-radius:4px; }
+.record-more { font-size:13px; }
+.dialog-head h2 { font-size:22px; font-weight:650; }
+.detail-section { margin:15px 0; border-top:1px solid var(--line); }
+.detail-section h3 { font-size:16px; margin:10px 0 0; }
+.detail-id { font-size:13px; color:var(--muted); margin:0; }
+.detail-field { grid-template-columns:minmax(86px,145px) minmax(0,1fr); }
+.detail-field>div { max-height:none; overflow:visible; }
+#historical-title { margin:0 0 8px; font-size:18px; }
+#historical-image { height:clamp(260px,56vh,550px); }
+@media(max-width:800px) {
+ header { padding:10px 16px; gap:6px 12px; }
+ header h1 { font-size:23px; }
+ header p { display:none; }
+ .search-row { flex-wrap:wrap; gap:6px 10px; }
+ .search-row .search { flex:1 0 100%; }
+ .tool-panels { gap:4px 12px; }
+ .view-switch { display:flex; gap:6px; margin-top:8px; }
+ .view-switch button { min-height:44px; }
+ .view-switch button[aria-pressed=true] { background:var(--green); border-color:var(--green); color:white; }
+ .archive-grid { display:block; margin-top:10px; }
+ .archive-grid[data-view="records"] .map-panel, .archive-grid[data-view="map"] .catalogue { display:none; }
+ .catalogue { padding:0; border:0; }
+ .directory-item small { display:block; }
+ .map-heading { gap:2px 8px; }
+ .map-heading p { margin-bottom:3px; }
+ #map { height:310px; }
+ .timeline-controls button, .timeline-controls select, #historical-open { min-height:44px; }
+ dialog { width:94%; padding:14px; }
+ .detail-field { grid-template-columns:1fr; gap:3px; }
+ .historical-layout { grid-template-columns:1fr; }
+ .historical-tools label { min-width:min(170px,100%); }
+}
+</style></head>
+<body><header><div><div class="eyebrow">CHEE KUNG TONG ARCHIVE</div><h1>致公堂档案</h1></div><p>目录检索 · 第二版</p><label class="script-picker">界面字形<select id="interface-script"><option value="hans" data-source-text>简体</option><option value="hant" data-source-text>繁體</option></select></label><button id="about">资料说明</button></header>
+<main>
+<section class="search-tools" aria-label="目录检索和筛选">
+<div class="search-row">
+<label class="search">检索档案<input id="query" type="search" placeholder="档号、题名、人物、地名或原件片段"></label>
+<label>检索范围<select id="search-scope"><option value="all">全部已索引文本</option><option value="identifier">精确档号／内部编号</option><option value="catalogue">工作簿目录</option><option value="library">馆方著录</option><option value="image">已核查原件片段</option></select></label>
+<button id="reset">清除筛选</button>
+</div>
+<div class="tool-panels">
+<details id="browse-controls">
+<summary>按城市、地名、人物或类别浏览</summary>
+<div class="directory">
+<nav class="archive-nav" aria-label="查找方式"><button id="city-tab" aria-pressed="true">城市</button><button id="name-tab" aria-pressed="false">地名写法</button><button id="person-tab" aria-pressed="false">人物</button><button id="all-tab" aria-pressed="false">类别</button></nav>
+<h2 id="directory-title" hidden>城市</h2><input id="directory-search" type="search" placeholder="查找城市" aria-label="查找城市或姓名写法"><p id="directory-note" class="muted"></p><div id="directory-list"></div><button id="more-directory">显示更多</button>
+</div></details>
+<details id="filter-options"><summary>年份与筛选</summary>
+<div class="search-options"><label>起始年<input id="from" type="number" placeholder="不限" min="1" max="9999"></label><label>结束年<input id="to" type="number" placeholder="不限" min="1" max="9999"></label>
+<label class="check"><input id="pending" type="checkbox" checked><span id="pending-label">显示待核查地点与日期</span></label><label class="check"><input id="undated" type="checkbox" checked>包括未能定位到年份的记录</label></div></details>
+</div>
+<div class="active-filters"><span id="active-filter-text" class="filter-caption" role="status"></span><button id="clear-selection" class="filter-chip" hidden>清除浏览选择 ×</button></div>
+</section>
+<div class="view-switch" role="group" aria-label="显示方式"><button id="show-records" aria-pressed="true" aria-controls="catalogue-panel">目录</button><button id="show-map" aria-pressed="false" aria-controls="map-panel">地图</button></div>
+<div id="archive-grid" class="archive-grid" data-view="records">
+<section id="map-panel" class="map-panel" aria-label="城市与时间">
+<div class="map-heading"><div><h2 id="heading">档案涉及的城市</h2><p id="selection" class="muted">点击城市查看相关档案。</p></div><button id="historical-open" hidden>查看历史地图</button></div>
+<div class="map-wrap"><svg id="map" aria-label="目录关联的城市地图" role="group"></svg><div class="map-controls"><button id="zoom-in" aria-label="放大地图">＋</button><button id="zoom-out" aria-label="缩小地图">−</button><button id="zoom-reset">全图</button></div><div id="map-error" hidden>地图未能加载。仍可通过目录查找档案。</div></div>
+<section class="timeline" aria-label="目录日期时间轴">
+<div class="timeline-meta"><p id="timeline-status" role="status"></p><button id="timeline-overview">区间总览</button></div>
+<div class="timeline-controls">
+<button id="timeline-play">播放</button><button id="timeline-prev" aria-label="上一年">‹</button><button id="timeline-next" aria-label="下一年">›</button>
+<label>模式<select id="timeline-mode"><option value="year">逐年</option><option value="cumulative">区间累计</option></select></label>
+<label class="timeline-slider">目录年份<input id="timeline-slider" type="range" min="1" max="9999" step="1"></label>
+</div>
+<details id="playback-settings"><summary>播放设置</summary><div class="timeline-settings">
+<p id="timeline-settings-range" class="muted"></p><button id="edit-range">编辑起止年</button>
+<label>跳到年份<input id="timeline-year" type="number" min="1" max="9999" step="1"></label>
+<label class="check"><input id="timeline-doubt" type="checkbox">加入有疑问的日期</label>
+<label id="timeline-origin-label" hidden>累计起点<select id="timeline-origin"><option value="range">从区间起始年</option><option value="custom">从指定年份</option></select></label>
+<label id="timeline-anchor-label" hidden>指定起始年<input id="timeline-anchor" type="number" min="1" max="9999" step="1"></label>
+</div></details>
+</section>
+<div class="legend"><span><i class="dot solid"></i>据目录对应</span><span><i class="dot hollow"></i>仅有待核查记录</span><span><i class="dot solid mixed"></i>含两类记录</span><span>城市代表点 · 按档案去重</span></div>
+</section>
+<section id="catalogue-panel" class="catalogue" aria-label="档案检索结果">
+<div class="result-head"><h2>档案目录 <span id="result-count"></span></h2><label>排序<select id="sort"><option value="source">原目录顺序</option><option value="date">年代顺序</option></select></label><button id="export">导出 CSV</button></div>
+<p id="result-note" class="muted" aria-live="polite"></p>
+<section id="name-evidence" hidden aria-live="polite"></section>
+<div id="results"></div><div class="pagination"><button id="prev">上一页</button><span id="page"></span><button id="next">下一页</button></div>
+<p id="coverage-note" class="muted"></p>
+</section></div></main>
+<footer>目录来源：<span data-source-text>《致公堂档案细目＿2024.xlsx》</span>（2024 年版）。线上原件：UC Berkeley Library Digital Collections。<br>地点与人物出现在同一档案中，不等于该人物曾在该地居住或活动。待核查表述完整保留。</footer>
+<dialog id="detail" aria-labelledby="detail-title"><div class="dialog-head"><div><p id="detail-id" class="detail-id"></p><h2 id="detail-title">档案详情</h2></div><button id="close-detail" aria-label="关闭档案详情">关闭 ×</button></div><div id="detail-body"></div></dialog>
+<dialog id="info"><div class="dialog-head"><h2>资料说明</h2><button id="close-info">关闭 ×</button></div><p>本版收录本地目录的 5,650 条记录。原目录题名、地名、人名、日期与备注保留原文。城市坐标来自 GeoNames；名称对应用于查找相关档案，并非逐件原件核验的结论。</p><p><strong>待核查：</strong>Hong Kong?、193? 等表述保留。疑问地点与同名城市候选可以出现在地图上，但以空心点区别；多个候选不会当作多个确定地点。193? 暂按 1930—1939 年间参与筛选，不表示连续活动。明确标示的多个离散年份分别参与筛选。</p><p><strong>简繁显示：</strong>切换只改变界面文字。人名、题名、地名写法和出处原文依照资料显示。简繁字形匹配只用于查找，不作为身份认定。</p><p><strong>人物：</strong>先按目录中的姓名写法检索。同名人物尚未区分；其他写法尚未全面核对。名单、地点与团体不会按排列顺序建立人物行程。人物字段中的完整原文始终可以检索。</p><p><strong>文本范围：</strong>检索覆盖工作簿目录、按唯一档号关联的部分馆方著录，以及已核查的原件摘录。馆方对应与历史解释均可继续核查。日期筛选依据工作簿目录日期。</p><p><strong>原件：</strong>通过具体馆藏记录访问；多条对应或重复档号会注明。按需下载可使用项目内的下载工具。本版不自动下载整库图像，也不提供未经核对的原件缩略图。</p><p>地图为现代城市代表点，不表示历史辖区。数量为去重后的目录记录数，不表示组织规模或历史重要性。</p><p>地图几何：Natural Earth / world-atlas；地点数据：GeoNames（CC BY 4.0）。本地资料快照：2026-10-29。</p></dialog>
+<dialog id="historical"><div class="dialog-head"><h2>历史地图</h2><button id="close-historical">关闭 ×</button></div><div class="historical-tools"><label>查找参考地图<input id="historical-query" type="search" placeholder="例如 湾区 或 1915"></label><label>选择原图<select id="historical-select"></select></label><button id="historical-zoom-in">放大</button><button id="historical-zoom-out">缩小</button><button id="historical-fit">全图</button></div><p id="historical-alignment" aria-live="polite"></p><div id="historical-layout" class="historical-layout"><div class="historical-view"><svg id="historical-image" role="img" aria-label="历史地图原图"></svg></div><aside><h3 id="historical-title"></h3><div id="historical-metadata"></div><button id="historical-year">按地图标年筛选档案</button><p class="muted">此操作只筛选目录日期，不把该年当作整幅地图的测绘日期。</p><p id="historical-scope" class="muted"></p><div id="historical-links"></div><p class="muted">原图浏览：未在本地配准，不叠加档案城市点。放大后可拖动查看。</p></aside></div><p id="historical-credit" class="muted"></p></dialog>
+<script src="assets/d3.min.js"></script><script src="assets/topojson.min.js"></script><script src="assets/world.js"></script><script src="historical-maps.js"></script><script src="catalogue.js"></script><script src="gazetteer.js"></script><script src="app.js"></script></body></html>

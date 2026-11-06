@@ -1,0 +1,12 @@
+{
+  "name": "chee-kung-tong-archive",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-site.cjs",
+    "check": "node scripts/build-site.cjs --check",
+    "test": "node scripts/test_catalogue_search.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}
