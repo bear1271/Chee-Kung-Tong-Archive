@@ -41,6 +41,7 @@ for (const map of maps) {
 }
 const app = read('site/candidate/app.js').replace(/\r\n/g,'\n')
     .replace('__CKT_CHINESE_FORMS__',()=>read('site/candidate/chinese-forms.json').trim())
+    .replace('__CKT_ENGLISH__',()=>JSON.stringify(JSON.parse(read('site/candidate/english.json'))))
     .replace('__CKT_CATALOGUE_SHA__',compatibility.catalogue)
     .replace('__CKT_GAZETTEER_SHA__',compatibility.gazetteer);
 const notice = read('site/candidate/ICU-LICENSE.txt').trim();

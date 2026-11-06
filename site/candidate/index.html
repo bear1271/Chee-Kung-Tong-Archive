@@ -1,6 +1,19 @@
 <!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>致公堂档案 · 检索库</title><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="historical.css"><style>
-.script-picker { margin-left:auto; color:#fff; } .script-picker select { color:var(--ink); } header #about { margin-left:0; }
+.script-picker { margin-left:auto; color:#fff; } .script-picker select { color:var(--ink); min-height:38px; } header #about { margin-left:0; align-self:end; }
+.brand-en { display:none; }
+html[lang=en] .brand-en { display:block; }
+html[lang=en] .brand-zh { display:none; }
+.brand-en h1 { font-size:clamp(22px,2.8vw,30px); letter-spacing:-.02em; line-height:1.15; font-weight:650; }
+.brand-en .eyebrow { font-size:13px; letter-spacing:.08em; margin-top:3px; }
+html[lang=en] .archive-text, .brand-en .eyebrow { font-family:"Segoe UI","PingFang TC","Microsoft JhengHei","Noto Sans CJK TC",system-ui,sans-serif; }
+html[lang=en] .record-title { font-size:clamp(17px,1.4vw,19px); line-height:1.5; }
+html[lang=en] .record .archive-text:not(.record-title) { font-size:14px; line-height:1.6; }
+html[lang=en] .detail-field { grid-template-columns:minmax(114px,155px) minmax(0,1fr); }
+html[lang=en] .detail-field > div { line-height:1.65; }
+html[lang=en] .dialog-head > div { min-width:0; }
+html[lang=en] .dialog-head > button { align-self:start; white-space:nowrap; }
+html[lang=en] header #about:hover { background:#29545a; }
 :root { --muted:#52645e; --surface:#fffefa; --soft:#eef2ec; }
 [hidden] { display:none !important; }
 body { font-size:16px; line-height:1.55; }
@@ -19,8 +32,9 @@ summary { cursor:pointer; color:var(--green); font-weight:600; }
 .search-row input, .search-row select { min-height:42px; }
 .search-row select { max-width:100%; }
 .tool-panels { display:flex; flex-wrap:wrap; gap:6px 18px; align-items:flex-start; margin:6px 0; }
+.tool-panels details { min-width:0; max-width:100%; }
 .tool-panels details[open] { flex:1 0 100%; }
-.tool-panels summary { width:max-content; min-height:40px; display:flex; align-items:center; gap:6px; }
+.tool-panels summary { width:max-content; max-width:100%; min-height:40px; display:flex; align-items:center; gap:6px; }
 .tool-panels summary::before { content:"▸"; }
 .tool-panels details[open]>summary::before { content:"▾"; }
 .search-options, .directory { background:var(--soft); padding:12px; border:0; border-radius:6px; }
@@ -101,9 +115,16 @@ summary { cursor:pointer; color:var(--green); font-weight:600; }
  .detail-field { grid-template-columns:1fr; gap:3px; }
  .historical-layout { grid-template-columns:1fr; }
  .historical-tools label { min-width:min(170px,100%); }
+ html[lang=en] .detail-field { grid-template-columns:1fr; }
+ html[lang=en] header .brand { flex:1 0 100%; }
+ html[lang=en] header .script-picker { margin-left:0; }
+ html[lang=en] header #about { margin-left:auto; }
+ html[lang=en] .search-row { display:grid; grid-template-columns:minmax(0,1fr) auto; }
+ html[lang=en] .search-row .search { grid-column:1 / -1; min-width:0; }
+ html[lang=en] .search-row #reset { min-height:42px; font-size:14px; }
 }
 </style></head>
-<body><header><div><div class="eyebrow">CHEE KUNG TONG ARCHIVE</div><h1>致公堂档案</h1></div><p>目录检索 · 第二版</p><label class="script-picker">界面字形<select id="interface-script"><option value="hans" data-source-text>简体</option><option value="hant" data-source-text>繁體</option></select></label><button id="about">资料说明</button></header>
+<body><header><div class="brand"><div class="brand-zh"><div class="eyebrow">CHEE KUNG TONG ARCHIVE</div><h1>致公堂档案</h1></div><div class="brand-en"><h1 lang="en">Chee Kung Tong Archive</h1><div class="eyebrow" lang="zh-Hant" data-source-text>致公堂檔案</div></div></div><p>目录检索 · 第二版</p><label class="script-picker">界面语言<select id="interface-script"><option value="hans" lang="zh-Hans" data-source-text>简体中文</option><option value="hant" lang="zh-Hant" data-source-text>繁體中文</option><option value="en" lang="en">English</option></select></label><button id="about">资料说明</button></header>
 <main>
 <section class="search-tools" aria-label="目录检索和筛选">
 <div class="search-row">
@@ -153,8 +174,8 @@ summary { cursor:pointer; color:var(--green); font-weight:600; }
 <div id="results"></div><div class="pagination"><button id="prev">上一页</button><span id="page"></span><button id="next">下一页</button></div>
 <p id="coverage-note" class="muted"></p>
 </section></div></main>
-<footer>目录来源：<span data-source-text>《致公堂档案细目＿2024.xlsx》</span>（2024 年版）。线上原件：UC Berkeley Library Digital Collections。<br>地点与人物出现在同一档案中，不等于该人物曾在该地居住或活动。待核查表述完整保留。</footer>
-<dialog id="detail" aria-labelledby="detail-title"><div class="dialog-head"><div><p id="detail-id" class="detail-id"></p><h2 id="detail-title">档案详情</h2></div><button id="close-detail" aria-label="关闭档案详情">关闭 ×</button></div><div id="detail-body"></div></dialog>
-<dialog id="info"><div class="dialog-head"><h2>资料说明</h2><button id="close-info">关闭 ×</button></div><p>本版收录本地目录的 5,650 条记录。原目录题名、地名、人名、日期与备注保留原文。城市坐标来自 GeoNames；名称对应用于查找相关档案，并非逐件原件核验的结论。</p><p><strong>待核查：</strong>Hong Kong?、193? 等表述保留。疑问地点与同名城市候选可以出现在地图上，但以空心点区别；多个候选不会当作多个确定地点。193? 暂按 1930—1939 年间参与筛选，不表示连续活动。明确标示的多个离散年份分别参与筛选。</p><p><strong>简繁显示：</strong>切换只改变界面文字。人名、题名、地名写法和出处原文依照资料显示。简繁字形匹配只用于查找，不作为身份认定。</p><p><strong>人物：</strong>先按目录中的姓名写法检索。同名人物尚未区分；其他写法尚未全面核对。名单、地点与团体不会按排列顺序建立人物行程。人物字段中的完整原文始终可以检索。</p><p><strong>文本范围：</strong>检索覆盖工作簿目录、按唯一档号关联的部分馆方著录，以及已核查的原件摘录。馆方对应与历史解释均可继续核查。日期筛选依据工作簿目录日期。</p><p><strong>原件：</strong>通过具体馆藏记录访问；多条对应或重复档号会注明。按需下载可使用项目内的下载工具。本版不自动下载整库图像，也不提供未经核对的原件缩略图。</p><p>地图为现代城市代表点，不表示历史辖区。数量为去重后的目录记录数，不表示组织规模或历史重要性。</p><p>地图几何：Natural Earth / world-atlas；地点数据：GeoNames（CC BY 4.0）。本地资料快照：2026-10-29。</p></dialog>
+<footer>目录来源：<span data-source-text>《致公堂档案细目＿2024.xlsx》</span>（2024 年版）。线上原件：<a href="https://digicoll.lib.berkeley.edu/search?cc=Tong+Archive&amp;ln=en">UC Berkeley Library Digital Collections</a><br>地点与人物出现在同一档案中，不等于该人物曾在该地居住或活动。待核查表述完整保留。</footer>
+<dialog id="detail" aria-labelledby="detail-title"><div class="dialog-head"><div><p id="detail-id" class="detail-id"></p><h2 id="detail-title" class="archive-text">档案详情</h2></div><button id="close-detail" aria-label="关闭档案详情">关闭 ×</button></div><div id="detail-body"></div></dialog>
+<dialog id="info"><div class="dialog-head"><h2>资料说明</h2><button id="close-info">关闭 ×</button></div><p>本网站为独立检索工具。档案由加州大学伯克利分校 C. V. Starr 东亚图书馆收藏。</p><p>本版收录本地目录的 5,650 条记录。原目录题名、地名、人名、日期与备注保留原文。城市坐标来自 GeoNames；名称对应用于查找相关档案，并非逐件原件核验的结论。</p><p><strong>待核查：</strong>Hong Kong?、193? 等表述保留。疑问地点与同名城市候选可以出现在地图上，但以空心点区别；多个候选不会当作多个确定地点。193? 暂按 1930—1939 年间参与筛选，不表示连续活动。明确标示的多个离散年份分别参与筛选。</p><p><strong>简繁显示：</strong>切换只改变界面文字。人名、题名、地名写法和出处原文依照资料显示。简繁字形匹配只用于查找，不作为身份认定。</p><p><strong>人物：</strong>先按目录中的姓名写法检索。同名人物尚未区分；其他写法尚未全面核对。名单、地点与团体不会按排列顺序建立人物行程。人物字段中的完整原文始终可以检索。</p><p><strong>文本范围：</strong>检索覆盖工作簿目录、按唯一档号关联的部分馆方著录，以及已核查的原件摘录。馆方对应与历史解释均可继续核查。日期筛选依据工作簿目录日期。</p><p><strong>原件：</strong>通过具体馆藏记录访问；多条对应或重复档号会注明。按需下载可使用项目内的下载工具。本版不自动下载整库图像，也不提供未经核对的原件缩略图。</p><p>地图为现代城市代表点，不表示历史辖区。数量为去重后的目录记录数，不表示组织规模或历史重要性。</p><p>地图几何：Natural Earth / world-atlas；地点数据：GeoNames（CC BY 4.0）。本地资料快照：2026-10-29。</p></dialog>
 <dialog id="historical"><div class="dialog-head"><h2>历史地图</h2><button id="close-historical">关闭 ×</button></div><div class="historical-tools"><label>查找参考地图<input id="historical-query" type="search" placeholder="例如 湾区 或 1915"></label><label>选择原图<select id="historical-select"></select></label><button id="historical-zoom-in">放大</button><button id="historical-zoom-out">缩小</button><button id="historical-fit">全图</button></div><p id="historical-alignment" aria-live="polite"></p><div id="historical-layout" class="historical-layout"><div class="historical-view"><svg id="historical-image" role="img" aria-label="历史地图原图"></svg></div><aside><h3 id="historical-title"></h3><div id="historical-metadata"></div><button id="historical-year">按地图标年筛选档案</button><p class="muted">此操作只筛选目录日期，不把该年当作整幅地图的测绘日期。</p><p id="historical-scope" class="muted"></p><div id="historical-links"></div><p class="muted">原图浏览：未在本地配准，不叠加档案城市点。放大后可拖动查看。</p></aside></div><p id="historical-credit" class="muted"></p></dialog>
 <script src="assets/d3.min.js"></script><script src="assets/topojson.min.js"></script><script src="assets/world.js"></script><script src="historical-maps.js"></script><script src="catalogue.js"></script><script src="gazetteer.js"></script><script src="app.js"></script></body></html>

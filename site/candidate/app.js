@@ -2,25 +2,39 @@
 (async()=>{'use strict';
 const $=id=>document.getElementById(id), D=window.CKT_DATA,G=window.CKT_GAZETTEER,V=window.CKT_COMPAT;
 const chineseForms=__CKT_CHINESE_FORMS__;
+const english=__CKT_ENGLISH__;
 const storageKey='ckt-interface-script';
-let script='hans';
-try{if(localStorage.getItem(storageKey)==='hant')script='hant';}catch{}
+const languageTags={hans:'zh-Hans',hant:'zh-Hant',en:'en'};
+const validLanguage=value=>Object.hasOwn(languageTags,value);
+const languageURL=new URL(location.href);
+let savedLanguage;
+try{savedLanguage=localStorage.getItem(storageKey);}catch{}
+const linkedLanguage=languageURL.searchParams.get('lang');
+let script=validLanguage(linkedLanguage)?linkedLanguage:validLanguage(savedLanguage)?savedLanguage:'hans';
 const literal=s=>String(s??'').normalize('NFKC').toLowerCase();
 const mapCharacters=(value,table)=>value.replace(/\p{Script=Han}/gu,c=>table[c]??c);
 const norm=value=>mapCharacters(literal(value),chineseForms.simplified);
 
-// Only application labels use this converter. Source values enter as separate arguments.
-const ui=value=>script==='hant'?mapCharacters(value,chineseForms.traditional)
+// Only interface copy and project metadata are localized. Archival text stays verbatim.
+const ui=value=>script==='en'?(english[value]??value):script==='hant'?mapCharacters(value,chineseForms.traditional)
  .replaceAll('日歷','日曆').replaceAll('鏈接','連結'):value;
 function uiText(parts,...values){
+ if(script==='en'){
+  const key=parts.reduce((text,part,index)=>text+(index?'{'+(index-1)+'}':'')+part,'');
+  if(Object.hasOwn(english,key))return english[key].replace(/\{(\d+)\}/g,(_,index)=>values[index]);
+ }
  return parts.reduce((text,part,index)=>text+(index?values[index-1]:'')+ui(part),'');
 }
+const yearLabel=year=>uiText`${year} 年`;
+const cumulativeLabel=(from,to)=>uiText`${from}–${to} 年累计`;
+// City index labels are editorial GeoNames labels, separate from the original place field.
+const cityLabel=city=>script==='en'?mapCharacters(city.name_zh,chineseForms.traditional):city.name_zh;
 const staticCopy=[];
 const labels=document.createTreeWalker(document.documentElement,NodeFilter.SHOW_TEXT);
 for(let node=labels.nextNode();node;node=labels.nextNode()){
  if(/\p{Script=Han}/u.test(node.data)&&!node.parentElement.closest('script,style,[data-source-text]')){
   const text=node.data;
-  staticCopy.push(()=>{node.data=ui(text);});
+  staticCopy.push(()=>{node.data=text.replace(/\S(?:[\s\S]*\S)?/,()=>ui(text.trim()));});
  }
 }
 for(const node of document.querySelectorAll('[aria-label],[placeholder],[title]')){
@@ -30,24 +44,33 @@ for(const node of document.querySelectorAll('[aria-label],[placeholder],[title]'
  }
 }
 function applyScript(){
- document.documentElement.lang=script==='hant'?'zh-Hant':'zh-Hans';
+ document.documentElement.lang=languageTags[script];
  staticCopy.forEach(update=>update());
  $('interface-script').value=script;
 }
 applyScript();
+function setLanguage(language){
+ if(!validLanguage(language))return;
+ script=language;
+ try{localStorage.setItem(storageKey,script);}catch{}
+ languageURL.searchParams.set('lang',script);
+ try{history.replaceState(null,'',languageURL);}catch{}
+ applyScript();
+}
+$('interface-script').onchange=e=>setLanguage(e.target.value);
 const expectedCatalogue='__CKT_CATALOGUE_SHA__',expectedGazetteer='__CKT_GAZETTEER_SHA__';
-function warn(message){const e=document.createElement('p');e.className='empty';e.id='compatibility-error';e.textContent=message;document.querySelector('main').before(e)}
-function disableAll(message){warn(message);document.querySelectorAll('main button, main input, main select').forEach(e=>e.disabled=true)}
-async function fingerprint(x){if(!globalThis.crypto?.subtle||!globalThis.TextEncoder)throw Error(ui('浏览器不支持离线内容校验'));const bytes=new TextEncoder().encode(JSON.stringify(x));return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('')}
+function warn(reason,suffix){const e=document.createElement('p');e.className='empty';e.id='compatibility-error';e.setAttribute('role','alert');const update=()=>{e.textContent=ui(reason)+ui(suffix);};staticCopy.push(update);update();document.querySelector('main').before(e)}
+function disableAll(reason){warn(reason,'；目录和地名检索已停用。');document.querySelectorAll('main button, main input, main select').forEach(e=>e.disabled=true)}
+async function fingerprint(x){if(!globalThis.crypto?.subtle||!globalThis.TextEncoder)throw Error('浏览器不支持离线内容校验');const bytes=new TextEncoder().encode(JSON.stringify(x));return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('')}
 $('name-tab').disabled=true;let catalogueOK=false,gazetteerOK=false,reason='';
-try{if(!V||V.contract!=='ckt-content-v1'||!V.catalogue||!V.gazetteer)throw Error(ui('版本校验信息缺失或不受支持'));if(V.catalogue!==expectedCatalogue||V.gazetteer!==expectedGazetteer)throw Error(ui('数据与前端版本不一致'));if(!D||!Array.isArray(D.records)||!Array.isArray(D.cities))throw Error(ui('档案目录缺失或结构损坏'));if(await fingerprint(D)!==V.catalogue)throw Error(ui('档案目录内容与版本不一致'));catalogueOK=true;if(!G||!Array.isArray(G.names)||!Array.isArray(G.evidence)||!Array.isArray(G.records)||!Array.isArray(G.cities)||G.schema_version!=='1.0.0')throw Error(ui('地名数据缺失、损坏或契约不受支持'));if(await fingerprint(G)!==V.gazetteer)throw Error(ui('地名数据内容与版本不一致'));gazetteerOK=true}catch(e){reason=e.message||ui('数据校验失败')}
-if(!catalogueOK){disableAll(reason+ui('；目录和地名检索已停用。'));return}
+try{if(!V||V.contract!=='ckt-content-v1'||!V.catalogue||!V.gazetteer)throw Error('版本校验信息缺失或不受支持');if(V.catalogue!==expectedCatalogue||V.gazetteer!==expectedGazetteer)throw Error('数据与前端版本不一致');if(!D||!Array.isArray(D.records)||!Array.isArray(D.cities))throw Error('档案目录缺失或结构损坏');if(await fingerprint(D)!==V.catalogue)throw Error('档案目录内容与版本不一致');catalogueOK=true;if(!G||!Array.isArray(G.names)||!Array.isArray(G.evidence)||!Array.isArray(G.records)||!Array.isArray(G.cities)||G.schema_version!=='1.0.0')throw Error('地名数据缺失、损坏或契约不受支持');if(await fingerprint(G)!==V.gazetteer)throw Error('地名数据内容与版本不一致');gazetteerOK=true}catch(e){reason=Object.hasOwn(english,e.message)?e.message:'数据校验失败'}
+if(!catalogueOK){disableAll(reason);return}
 const cityMap=new Map(D.cities.map(c=>[c.city_id,c]));
 const S={mode:'city',city:null,person:null,personVariants:false,name:null,evidencePage:0,q:'',directory:'',from:null,to:null,scope:'all',category:null,pending:true,undated:true,page:0,limit:40,sort:'source'};
 function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 function badge(text){return el('span',text,'badge');}
 const gOK=gazetteerOK;const nameMap=new Map(),evidenceByName=new Map(),recordMap=new Map(D.records.map(r=>[r.id,r]));
-if(gOK){$('name-tab').disabled=false;for(const n of G.names)nameMap.set(n.id,n);for(const e of G.evidence){if(!evidenceByName.has(e.name_id))evidenceByName.set(e.name_id,[]);evidenceByName.get(e.name_id).push(e)}}else{warn(reason+ui('；地名写法查找已停用，目录仍可使用。'));$('name-tab').disabled=true;}
+if(gOK){$('name-tab').disabled=false;for(const n of G.names)nameMap.set(n.id,n);for(const e of G.evidence){if(!evidenceByName.has(e.name_id))evidenceByName.set(e.name_id,[]);evidenceByName.get(e.name_id).push(e)}}else{warn(reason,'；地名写法查找已停用，目录仍可使用。');$('name-tab').disabled=true;}
 const cityNames=new Map();if(gOK)for(const n of G.names){if(!n.city_id||!['中文','拉丁字母'].includes(n.script)||/[?？]/.test(n.text)||['本埠','都城','大埠','正埠','該埠','该埠','此埠','原埠','埠'].includes(n.text))continue;const ev=evidenceByName.get(n.id)||[];if(!ev.some(e=>e.status==='catalogue_only'))continue;if(!cityNames.has(n.city_id))cityNames.set(n.city_id,[]);cityNames.get(n.city_id).push(n)}
 function visibleLinks(r){return r.cities.filter(x=>S.pending||!x.pending);}
 const catalogueFields = [
@@ -57,13 +80,13 @@ const catalogueFields = [
 ];
 function searchableFields(r){
  const catalogue = catalogueFields.flatMap(([key,label]) =>
-  [r[key]].flat().filter(Boolean).map(text => ({source:'catalogue',key,label,text,locator:'Sheet1 第 '+r.row+' 行'})));
+  [r[key]].flat().filter(Boolean).map(text => ({source:'catalogue',key,label,text,row:r.row})));
  const library = r.links.flatMap(link => (link.text_fields||[]).map(field => ({
   source:'library',label:field.label,text:field.text,locator:link.id+' · MARC '+field.field,
   url:'https://digicoll.lib.berkeley.edu/record/'+encodeURIComponent(link.id),
  })));
  const images = r.image_excerpts.map(e => ({
-  source:'image',label:'摘录',text:e.text,locator:e.image+' · '+e.location,url:e.url,
+  source:'image',label:'摘录',text:e.text,image:e.image,location:e.location,url:e.url,
  }));
  return [...catalogue,...library,...images].map(field => ({...field,original:literal(field.text),normalized:norm(field.text)}));
 }
@@ -102,23 +125,23 @@ function renderTimeline(bounds){
  const [start,end]=playbackBounds(),active=timeline.year!==null;
  const slider=$('timeline-slider'),year=$('timeline-year');
  for(const input of [slider,year]){input.min=start;input.max=end;input.value=timeline.year??start;}
- slider.setAttribute('aria-valuetext',active?timeline.year+ui(' 年'):ui('区间总览，可选择年份'));
+ slider.setAttribute('aria-valuetext',active?yearLabel(timeline.year):ui('区间总览，可选择年份'));
  const cumulative=timeline.mode==='cumulative';
  const [rangeStart,rangeEnd]=configuredYears(),anchor=$('timeline-anchor');
  anchor.min=rangeStart;anchor.max=rangeEnd;anchor.value=timeline.anchor===null?'':start;
  $('timeline-origin-label').hidden=!cumulative;
  $('timeline-anchor-label').hidden=!cumulative||timeline.anchor===null;
  $('timeline-origin').value=timeline.anchor===null?'range':'custom';
- $('timeline-settings-range').textContent=ui('设定区间 ')+rangeStart+'–'+rangeEnd+ui(' 年')+(cumulative?ui(' · 累计起点 ')+start+ui(' 年'):'');
+ $('timeline-settings-range').textContent=uiText`设定区间 ${rangeStart}–${rangeEnd} 年`+(cumulative?uiText` · 累计起点 ${start} 年`:'');
  $('timeline-play').textContent=timeline.timer===null?ui('播放'):ui('暂停');
  $('timeline-overview').disabled=!active;
  $('timeline-prev').disabled=!active||timeline.year===start;
  $('timeline-next').disabled=active&&timeline.year===end;
  $('undated').disabled=active;
  $('pending-label').textContent=active?ui('显示待核查地点'):ui('显示待核查地点与日期');
- const frame=active?(timeline.mode==='cumulative'?bounds[0]+'–'+bounds[1]+ui(' 年累计'):timeline.year+ui(' 年')):ui('区间总览');
+ const frame=active?(timeline.mode==='cumulative'?cumulativeLabel(...bounds):yearLabel(timeline.year)):ui('区间总览');
  const doubt=timeline.doubt?ui('已加入有疑问的日期'):ui('有疑问的日期已隐藏');
- $('timeline-status').textContent=frame+ui(' · 播放范围 ')+start+'–'+end+ui(' 年')+(active?' · '+doubt:'');
+ $('timeline-status').textContent=uiText`${frame} · 播放范围 ${start}–${end} 年`+(active?' · '+doubt:'');
 }
 function matchingDate(r,bounds){
  if(timeline.year!==null)return frameDate(r,bounds)?.expression;
@@ -147,7 +170,9 @@ function baseFilter(r,query,bounds){
 }
 function hitLabel(hit,translate=ui){
  const form=hit.formMatch?translate(' · 简繁字形匹配'):'';
- return translate(sourceLabel[hit.source])+' · '+translate(hit.label)+' · '+hit.locator+form;
+ const locator=hit.source==='catalogue'?translate('Sheet1 第 ')+hit.row+translate(' 行'):
+  hit.source==='image'?hit.image+' · '+translate(hit.location):hit.locator;
+ return translate(sourceLabel[hit.source])+' · '+translate(hit.label)+' · '+locator+form;
 }
 function hitPreview(hit){
  if(hit.text.length<=180)return hit.text;
@@ -213,13 +238,13 @@ function render(){
  $('directory-search').disabled=S.mode==='all';
  $('directory-search').hidden=S.mode==='all';
  $('directory-note').textContent=S.mode==='person'?ui('点选姓名按该写法筛选；输入可查简繁字形。相近写法不表示同一人物。'):S.mode==='all'?ui('按目录类别浏览。详情与导出保留类别原文。'):S.mode==='name'?ui('右侧数字是全部来源的去重档案数；选中后显示当前筛选结果。'):ui('数量为相关目录记录数，包含所选待核查资料。');
- $('heading').textContent=S.person?ui('与所选姓名相关档案中的地点'):S.city?cityMap.get(S.city).name_zh:ui('档案涉及的城市');
- const facets=[S.city?ui('城市：')+cityMap.get(S.city).name_zh:'',S.person?(S.personVariants?ui('姓名字形检索：'):ui('姓名写法：'))+S.person:'',S.name?ui('地名写法：')+nameMap.get(S.name)?.text:'',S.category!==null?ui('类别：')+ui(S.category):''].filter(Boolean);
+ $('heading').textContent=S.person?ui('与所选姓名相关档案中的地点'):S.city?cityLabel(cityMap.get(S.city)):ui('档案涉及的城市');
+ const facets=[S.city?ui('城市：')+cityLabel(cityMap.get(S.city)):'',S.person?(S.personVariants?ui('姓名字形检索：'):ui('姓名写法：'))+S.person:'',S.name?ui('地名写法：')+nameMap.get(S.name)?.text:'',S.category!==null?ui('类别：')+ui(S.category):''].filter(Boolean);
  $('selection').textContent=facets.join(' · ')||ui('点击城市查看相关档案。');
  $('clear-selection').hidden=!facets.length;
- const dateLabel=timeline.year!==null?(timeline.mode==='cumulative'?bounds.join('–')+ui(' 年累计'):timeline.year+ui(' 年')):
-  S.from!==null||S.to!==null?(S.from??ui('不限'))+'–'+(S.to??ui('不限'))+ui(' 年'):'';
- const filters=[S.q.trim()?ui('关键词「')+S.q.trim()+'」':'',S.scope!=='all'?$('search-scope').selectedOptions[0].textContent:'',dateLabel,...facets].filter(Boolean);
+ const dateLabel=timeline.year!==null?(timeline.mode==='cumulative'?cumulativeLabel(...bounds):yearLabel(timeline.year)):
+  S.from!==null||S.to!==null?yearLabel((S.from??ui('不限'))+'–'+(S.to??ui('不限'))):'';
+ const filters=[S.q.trim()?uiText`关键词「${S.q.trim()}」`:'',S.scope!=='all'?$('search-scope').selectedOptions[0].textContent:'',dateLabel,...facets].filter(Boolean);
  $('active-filter-text').textContent=filters.length?filters.join(' · '):ui('全部目录');
  $('show-records').textContent=ui('目录 · ')+filtered.length.toLocaleString();
  renderTimeline(bounds);renderDirectory(base,nameSet);renderRecords(bounds);renderNameEvidence();if(mapReady)drawMap();
@@ -232,14 +257,14 @@ function render(){
 }
 function renderDirectory(base,nameSet){const box=$('directory-list');box.replaceChildren();let entries=[];
  if(S.mode==='name'){
-  const q=norm(S.directory); if(q) entries=[...nameMap.values()].filter(n=>norm(n.text).includes(q)).map(n=>({name:n.text,sub:(n.city_id?(cityMap.get(n.city_id)?.name_zh||n.city_id):ui('尚无城市对应'))+' · '+ui(n.script)+' · '+(n.status==='verified'?ui('名称已核实'):n.status==='disputed'?ui('名称存在争议'):ui('名称尚未历史核实')),count:new Set((evidenceByName.get(n.id)||[]).map(e=>e.record_id)).size,active:S.name===n.id,select:()=>{S.name=n.id;S.city=null;S.page=0;S.evidencePage=0;render();}}));
+  const q=norm(S.directory); if(q) entries=[...nameMap.values()].filter(n=>norm(n.text).includes(q)).map(n=>({name:n.text,sub:(n.city_id?(cityMap.has(n.city_id)?cityLabel(cityMap.get(n.city_id)):n.city_id):ui('尚无城市对应'))+' · '+ui(n.script)+' · '+(n.status==='verified'?ui('名称已核实'):n.status==='disputed'?ui('名称存在争议'):ui('名称尚未历史核实')),count:new Set((evidenceByName.get(n.id)||[]).map(e=>e.record_id)).size,active:S.name===n.id,select:()=>{S.name=n.id;S.city=null;S.page=0;S.evidencePage=0;render();}}));
  }else if(S.mode==='person'){
   const counts=new Map();for(const r of base.filter(r=>!S.city||visibleLinks(r).some(x=>x.id===S.city)))for(const n of r.names)counts.set(n,(counts.get(n)||0)+1);
   entries=[...counts].filter(([n])=>norm(n).includes(norm(S.directory))).sort((a,b)=>b[1]-a[1]).map(([name,count])=>({name,count,select:()=>choosePerson(name),active:S.person===name&&!S.personVariants}));
-  if(S.directory.trim()){const b=el('button',ui('按人物原文检索“')+S.directory+'”','directory-item');b.onclick=()=>choosePerson(S.directory.trim(),true);box.append(b);}
+  if(S.directory.trim()){const b=el('button',uiText`按人物原文检索“${S.directory}”`,'directory-item');b.onclick=()=>choosePerson(S.directory.trim(),true);box.append(b);}
  }else if(S.mode==='city'){
   const counts=new Map();for(const r of base.filter(personMatches))for(const x of visibleLinks(r))counts.set(x.id,(counts.get(x.id)||0)+1);
-  entries=[...counts].map(([id,count])=>({city:cityMap.get(id),count,id})).filter(x=>norm(x.city.name_zh+' '+x.city.name_local).includes(norm(S.directory))||(S.directory&& (cityNames.get(x.id)||[]).some(n=>norm(n.text).includes(norm(S.directory))))).sort((a,b)=>b.count-a.count).map(x=>({name:x.city.name_zh,sub:x.city.name_local+' · '+x.city.country+(S.directory?((cityNames.get(x.id)||[]).filter(n=>norm(n.text).includes(norm(S.directory))).slice(0,3).map(n=>ui(' · 目录写法：')+n.text+ui('（据目录对应，待历史核实）')).join('')):''),count:x.count,select:()=>chooseCity(x.id),active:S.city===x.id}));
+  entries=[...counts].map(([id,count])=>({city:cityMap.get(id),count,id})).filter(x=>norm(x.city.name_zh+' '+x.city.name_local).includes(norm(S.directory))||(S.directory&& (cityNames.get(x.id)||[]).some(n=>norm(n.text).includes(norm(S.directory))))).sort((a,b)=>b.count-a.count).map(x=>({name:cityLabel(x.city),sub:x.city.name_local+' · '+x.city.country+(S.directory?((cityNames.get(x.id)||[]).filter(n=>norm(n.text).includes(norm(S.directory))).slice(0,3).map(n=>ui(' · 目录写法：')+n.text+ui('（据目录对应，待历史核实）')).join('')):''),count:x.count,select:()=>chooseCity(x.id),active:S.city===x.id}));
  }else{
   const counts=new Map();for(const r of base.filter(r=>selectedFilter(r,nameSet))){
    const label=browseCategory(r.category);
@@ -250,7 +275,7 @@ function renderDirectory(base,nameSet){const box=$('directory-list');box.replace
  for(const x of entries.slice(0,S.limit)){if(S.mode==='person')x.count=base.filter(r=>(!S.city||visibleLinks(r).some(x=>x.id===S.city))&&r.people_raw.includes(x.name)).length;const b=el('button',undefined,'directory-item'+(x.active?' active':''));const label=el('span',x.name);if(x.sub)label.append(el('small',x.sub));b.append(label,el('span',x.count.toLocaleString(),'number'));b.onclick=x.select;box.append(b);}
  $('more-directory').hidden=entries.length<=S.limit;
 }
-function renderNameEvidence(){const box=$('name-evidence');box.replaceChildren();box.hidden=!S.name;if(!S.name)return;const n=nameMap.get(S.name),visible=new Set(filtered.map(r=>r.id));const ev=(evidenceByName.get(S.name)||[]).filter(e=>visible.has(e.record_id)&&(S.pending||e.status==='catalogue_only'));box.append(el('h2',ui('目录写法：')+n.text),el('p',ui('此写法的实际出处：')+visible.size+ui(' 条档案，')+ev.length+ui(' 条出处。')+(n.status==='verified'?ui('该名称已记录核查判断。'):n.status==='disputed'?ui('该名称存在争议。'):ui('目录写法尚未独立核实为历史名称。'))+ui('目录日期不代表名称使用时期。'),'muted'));if(!n.city_id||n.script==='中文名称片段'||n.script==='括注外文整段'||['本埠','都城','大埠','正埠','該埠','该埠','此埠','原埠','埠'].includes(n.text))box.append(el('p',ui('此项可能是片段、相对指称、括注整段或未对应城市，仅按原记录语境查看，不作为通用城市别名。'),'muted'));if(n.city_id){const city=el('button',ui('查看该城市全部关联档案'));city.onclick=()=>chooseCity(n.city_id);box.append(city)}S.evidencePage=Math.min(S.evidencePage,Math.max(0,Math.ceil(ev.length/40)-1));for(const e of ev.slice(S.evidencePage*40,S.evidencePage*40+40)){const r=recordMap.get(e.record_id),item=el('article',undefined,'record');item.append(el('p',ui('名称原文：')+n.text+ui('；档号：')+e.archive_number+ui('；目录第 ')+e.source_row+ui(' 行；日期原文：')+(e.date_raw||ui('不详'))),el('p',ui('地点整格原文：')+e.place_raw),el('p',ui('对应依据：')+e.basis),el('p',ui('目录证据：')+e.source_status+(e.disagreement?ui('；原件差异：')+e.disagreement:'')));if(r){const b=el('button',ui('查看档案详情'));b.onclick=()=>detail(r);item.append(b)}box.append(item)}if(ev.length>40){const prev=el('button',ui('上一组出处')),next=el('button',ui('下一组出处'));prev.disabled=S.evidencePage===0;next.disabled=(S.evidencePage+1)*40>=ev.length;prev.onclick=()=>{S.evidencePage--;renderNameEvidence()};next.onclick=()=>{S.evidencePage++;renderNameEvidence()};box.append(prev,el('span',ui(' 第 ')+(S.evidencePage+1)+' / '+Math.ceil(ev.length/40)+ui(' 组 ')),next)}}
+function renderNameEvidence(){const box=$('name-evidence');box.replaceChildren();box.hidden=!S.name;if(!S.name)return;const n=nameMap.get(S.name),visible=new Set(filtered.map(r=>r.id));const ev=(evidenceByName.get(S.name)||[]).filter(e=>visible.has(e.record_id)&&(S.pending||e.status==='catalogue_only'));box.append(el('h2',ui('目录写法：')+n.text),el('p',ui('此写法的实际出处：')+visible.size+ui(' 条档案，')+ev.length+ui(' 条出处。')+(n.status==='verified'?ui('该名称已记录核查判断。'):n.status==='disputed'?ui('该名称存在争议。'):ui('目录写法尚未独立核实为历史名称。'))+ui('目录日期不代表名称使用时期。'),'muted'));if(!n.city_id||n.script==='中文名称片段'||n.script==='括注外文整段'||['本埠','都城','大埠','正埠','該埠','该埠','此埠','原埠','埠'].includes(n.text))box.append(el('p',ui('此项可能是片段、相对指称、括注整段或未对应城市，仅按原记录语境查看，不作为通用城市别名。'),'muted'));if(n.city_id){const city=el('button',ui('查看该城市全部关联档案'));city.onclick=()=>chooseCity(n.city_id);box.append(city)}S.evidencePage=Math.min(S.evidencePage,Math.max(0,Math.ceil(ev.length/40)-1));for(const e of ev.slice(S.evidencePage*40,S.evidencePage*40+40)){const r=recordMap.get(e.record_id),item=el('article',undefined,'record');item.append(el('p',ui('名称原文：')+n.text+ui('；档号：')+e.archive_number+ui('；目录第 ')+e.source_row+ui(' 行；日期原文：')+(e.date_raw||ui('不详'))),el('p',ui('地点整格原文：')+e.place_raw),el('p',ui('对应依据：')+ui(e.basis)),el('p',ui('目录证据：')+ui(e.source_status)+(e.disagreement?ui('；原件差异：')+ui(e.disagreement):'')));if(r){const b=el('button',ui('查看档案详情'));b.onclick=()=>detail(r);item.append(b)}box.append(item)}if(ev.length>40){const prev=el('button',ui('上一组出处')),next=el('button',ui('下一组出处'));prev.disabled=S.evidencePage===0;next.disabled=(S.evidencePage+1)*40>=ev.length;prev.onclick=()=>{S.evidencePage--;renderNameEvidence()};next.onclick=()=>{S.evidencePage++;renderNameEvidence()};box.append(prev,el('span',ui(' 第 ')+(S.evidencePage+1)+' / '+Math.ceil(ev.length/40)+ui(' 组 ')),next)}}
 function renderRecords(bounds){const box=$('results');box.replaceChildren();if(!filtered.length){box.append(el('p',ui('当前条件下没有目录记录。可调整筛选条件，或返回区间总览。'),'empty'));return;}
  let group;
  for(const r of filtered.slice(S.page*40,S.page*40+40)){
@@ -261,7 +286,7 @@ function renderRecords(bounds){const box=$('results');box.replaceChildren();if(!
     box.append(el('h3',year?year+ui(' · 按相交日期起点分组'):ui('未能定位到年份'),'muted'));
    }
   }
-  const item=el('article',undefined,'record'),top=el('div',undefined,'record-top'),button=el('button',r.title||ui('（原目录未注明题名）'),'record-title');
+  const item=el('article',undefined,'record'),top=el('div',undefined,'record-top'),button=el('button',r.title||ui('（原目录未注明题名）'),'record-title archive-text');
   button.onclick=()=>detail(r);
   top.append(button,el('span',r.order,'code'),el('span',r.date||ui('日期不详'),'code'));
   if(r.time.pending)top.append(badge(ui(r.time.label)));
@@ -270,24 +295,24 @@ function renderRecords(bounds){const box=$('results');box.replaceChildren();if(!
   const hits=matches.get(r.id)||[];
   if(hits.length){
    const hit=hits[0],summary=el('div',undefined,'fields hit-summary');
-   summary.append(el('strong',hitLabel(hit)),el('div',hitPreview(hit)));
+   summary.append(el('strong',hitLabel(hit)),el('div',hitPreview(hit),'archive-text'));
    if(hits.length>1)summary.append(el('div',ui('另有 ')+(hits.length-1)+ui(' 项命中，见档案详情。'),'record-more'));
    item.append(summary);
   }
-  const places=el('div',undefined,'fields');places.append(el('span',r.place||ui('地点未注明'),'value'));if(r.cities.some(x=>x.pending))places.append(badge(ui('地点待核查')));if(!r.cities.length)places.append(badge(ui('尚未落点')));item.append(places);
-  if(r.people_raw){const text=r.people_raw.length>100?r.people_raw.slice(0,100)+'…':r.people_raw;item.append(el('div',text,'fields'));}
+  const places=el('div',undefined,'fields');places.append(el('span',r.place||ui('地点未注明'),'value archive-text'));if(r.cities.some(x=>x.pending))places.append(badge(ui('地点待核查')));if(!r.cities.length)places.append(badge(ui('尚未落点')));item.append(places);
+  if(r.people_raw){const text=r.people_raw.length>100?r.people_raw.slice(0,100)+'…':r.people_raw;item.append(el('div',text,'fields archive-text'));}
   box.append(item);
  }
 }
 function detail(r){stopPlayback();renderTimeline(dateBounds());$('detail-title').textContent=r.title||ui('档案详情');
- $('detail-id').textContent=r.order+' · '+r.id;
+ $('detail-id').textContent=script==='en'?uiText`档号：${r.order} · 内部编号：${r.id}`:r.order+' · '+r.id;
  const box=$('detail-body');box.replaceChildren();
  let section=box;
  const group=title=>{section=el('section',undefined,'detail-section');section.append(el('h3',title));box.append(section);};
  const field=(name,content)=>{const row=el('div',undefined,'detail-field'),value=el('div');if(typeof content==='string')value.textContent=content||ui('未注明');else value.append(content);row.append(el('strong',name),value);section.append(row);};
  const hits=matches.get(r.id)||[];
  if(hits.length){const panel=el('div');hits.forEach(hit=>panel.append(hitDetail(hit)));field(ui('检索命中'),panel);}
- if(r.original_review_note)field(ui('原件核查提示'),r.original_review_note);
+ if(r.original_review_note)field(ui('原件核查提示'),ui(r.original_review_note));
  group(ui('工作簿目录'));
  field(ui('日期原文'),r.date);
  if(r.time.expressions.length){
@@ -299,14 +324,14 @@ function detail(r){stopPlayback();renderTimeline(dateBounds());$('detail-title')
   }
   field(ui('日期检索范围'),list);
  }
- if(r.time.unresolved.length)field(ui('未解析日期片段'),r.time.unresolved.join('／'));if(r.time.pending)field(ui('日期说明'),ui(r.time.label)+ui('。原文保留；年份范围仅用于检索，不代表连续活动。'));field(ui('地点原文'),r.place);
- const locations=el('div');for(const x of r.cities){const c=cityMap.get(x.id);const b=el('button',c.name_zh+(x.pending?ui(' · 待核查'):''),'city-link');b.onclick=()=>{$('detail').close();chooseCity(x.id);};locations.append(b,el('div',x.pending?ui('暂作地点候选，原目录中的疑问保留。'):ui('据目录地点对应，使用城市级代表点。'),'muted'));}if(!r.cities.length)locations.textContent=ui('尚未对应到城市；原地点信息仍可检索。');field(ui('城市对应'),locations);
+ if(r.time.unresolved.length)field(ui('未解析日期片段'),r.time.unresolved.join(ui('／')));if(r.time.pending)field(ui('日期说明'),ui(r.time.label)+ui('。原文保留；年份范围仅用于检索，不代表连续活动。'));field(ui('地点原文'),r.place);
+ const locations=el('div');for(const x of r.cities){const c=cityMap.get(x.id);const b=el('button',cityLabel(c)+(x.pending?ui(' · 待核查'):''),'city-link');b.onclick=()=>{$('detail').close();chooseCity(x.id);};locations.append(b,el('div',x.pending?ui('暂作地点候选，原目录中的疑问保留。'):ui('据目录地点对应，使用城市级代表点。'),'muted'));}if(!r.cities.length)locations.textContent=ui('尚未对应到城市；原地点信息仍可检索。');field(ui('城市对应'),locations);
 
- if((r.place_mentions||[]).length){const parts=el('details');parts.append(el('summary',ui('查看逐项地点对应依据')));for(const m of r.place_mentions){const ids=m.city_id?[m.city_id]:m.candidate_ids;const names=ids.map(id=>cityMap.get(id)?.name_zh||id).join('／');const p=el('p');p.textContent=ui('规范化识别片段：')+m.fragment+' → '+(names||ui('尚未对应'))+'；'+(m.source_uncertain?ui('原文有疑问；'):'')+(m.city_id?ui('据目录对应'):ui('候选之一，未确认'))+'。'+m.reason;parts.append(p);}parts.append(el('p',ui('识别片段经过文字规范化，完整原文见地点字段。同一片段的多个候选互为备选；不据排列顺序推断方向，不把目录日期逐一配给地点。')));field(ui('逐项地点'),parts);}
+ if((r.place_mentions||[]).length){const parts=el('details');parts.append(el('summary',ui('查看逐项地点对应依据')));for(const m of r.place_mentions){const ids=m.city_id?[m.city_id]:m.candidate_ids;const names=ids.map(id=>cityMap.has(id)?cityLabel(cityMap.get(id)):id).join(ui('／'));const p=el('p');p.textContent=ui('规范化识别片段：')+m.fragment+' → '+(names||ui('尚未对应'))+ui('；')+(m.source_uncertain?ui('原文有疑问；'):'')+(m.city_id?ui('据目录对应'):ui('候选之一，未确认'))+ui('。')+ui(m.reason);parts.append(p);}parts.append(el('p',ui('识别片段经过文字规范化，完整原文见地点字段。同一片段的多个候选互为备选；不据排列顺序推断方向，不把目录日期逐一配给地点。')));field(ui('逐项地点'),parts);}
  if(new Set((r.cities||[]).map(x=>x.id)).size>1)field(ui('地点关系'),ui('本档案关联多个地点；各地在事件中的角色、先后和方向尚未核实，不表示人物行程。'));
  field(ui('人物原文'),r.people_raw);if(/[?？]/.test(r.people_raw))field(ui('人物说明'),ui('原目录含疑问字或疑问标记，保留待核查。'));const people=el('div');for(const n of r.names.slice(0,100)){const b=el('button',n,'person-link');b.onclick=()=>{$('detail').close();S.mode='person';choosePerson(n);};people.append(b);}if(r.names.length>100)people.append(el('p',ui('更多姓名请在人物原文中检索。')));if(r.names.length)field(ui('姓名写法'),people);
  field(ui('团体名称'),r.organizations);field(ui('题名／内容'),r.title);field(ui('类别原文'),r.category);field(ui('份数原文'),r.copies);field(ui('备注'),r.note);if(r.extra.length)field(ui('补充备注'),r.extra.join('\n'));
- field(ui('目录来源'),D.source.catalogue+ui(' · Sheet1 第 ')+r.row+ui(' 行'));
+ field(ui('目录来源'),D.source.catalogue+' · '+ui('Sheet1 第 ')+r.row+ui(' 行'));
  group(ui('馆方记录与原件核查'));
  const originals=el('div');for(const link of r.links){const a=el('a',uiText`查看馆方原件 · ${link.id}（文件清单 ${link.files} 项）`);a.href='https://digicoll.lib.berkeley.edu/record/'+encodeURIComponent(link.id);a.target='_blank';a.rel='noopener';originals.append(a,el('br'));if(link.status!=='identifier_candidate')originals.append(badge(ui('档号对应待核查')));}if(!r.links.length){const a=el('a',ui('在馆方检索此档号'));a.href='https://digicoll.lib.berkeley.edu/search?p='+encodeURIComponent(r.order);a.target='_blank';a.rel='noopener';originals.append(el('p',ui('尚未找到唯一的线上对应。')),a);}field(ui('原件访问'),originals);
  const indexed=searchIndex.get(r.id);
@@ -330,15 +355,15 @@ function drawMap(){const svg=$('map'),w=svg.clientWidth,h=svg.clientHeight;if(!w
  const data=[...groups.values()].map(g=>({...g,city:cityMap.get(g.id)}));
  const points=mapGroup.selectAll('g.city').data(data,d=>d.id).join(enter=>{const g=enter.append('g').attr('class','city');g.append('circle');g.append('title');g.append('text');return g;});
  points.attr('transform',d=>'translate('+projection([d.city.lon,d.city.lat])+')');
- points.select('circle').attr('r',d=>S.city===d.id?10:Math.min(9,3+Math.log2(d.normal.size+d.pending.size+1)*.55)).attr('fill',d=>d.normal.size?'#216858':'#faf9f5').attr('fill-opacity',d=>d.normal.size?.82:1).attr('stroke',d=>d.pending.size?'#a76a16':'#faf9f5').attr('stroke-width',d=>S.city===d.id?3:1.5).attr('stroke-dasharray',d=>d.normal.size?null:'3 2').attr('role','button').attr('tabindex',0).attr('aria-label',d=>d.city.name_zh+'，'+d.normal.size+ui('条据目录对应，')+d.pending.size+ui('条待核查')).on('click',(e,d)=>chooseCity(d.id)).on('keydown',(e,d)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();chooseCity(d.id);}});
- points.select('title').text(d=>d.city.name_zh+' / '+d.city.name_local+ui('\n据目录对应 ')+d.normal.size+ui(' 条；待核查 ')+d.pending.size+ui(' 条'));
- points.select('text').attr('x',12).attr('y',4).text(d=>S.city===d.id?d.city.name_zh:'');
+ points.select('circle').attr('r',d=>S.city===d.id?10:Math.min(9,3+Math.log2(d.normal.size+d.pending.size+1)*.55)).attr('fill',d=>d.normal.size?'#216858':'#faf9f5').attr('fill-opacity',d=>d.normal.size?.82:1).attr('stroke',d=>d.pending.size?'#a76a16':'#faf9f5').attr('stroke-width',d=>S.city===d.id?3:1.5).attr('stroke-dasharray',d=>d.normal.size?null:'3 2').attr('role','button').attr('tabindex',0).attr('aria-label',d=>uiText`${cityLabel(d.city)}，${d.normal.size}条据目录对应，${d.pending.size}条待核查`).on('click',(e,d)=>chooseCity(d.id)).on('keydown',(e,d)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();chooseCity(d.id);}});
+ points.select('title').text(d=>uiText`${cityLabel(d.city)} / ${d.city.name_local}\n据目录对应 ${d.normal.size} 条；待核查 ${d.pending.size} 条`);
+ points.select('text').attr('x',12).attr('y',4).text(d=>S.city===d.id?cityLabel(d.city):'');
 }
-function exportCSV(){const rows=[['内部记录编号','档号','题名／内容','日期原文','日期状态','地点原文','人物原文','团体名称','类别','备注','线上记录','命中来源']];for(const r of filtered)rows.push([r.id,r.order,r.title,r.date,r.time.label,r.place,r.people_raw,r.organizations,r.category,r.note,r.links.map(x=>'https://digicoll.lib.berkeley.edu/record/'+x.id).join(' '),(matches.get(r.id)||[]).map(hit=>hitLabel(hit,text=>text)).join('｜')]);const safe=v=>{let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};const blob=new Blob(['\ufeff'+rows.map(r=>r.map(safe).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});const a=el('a');a.href=URL.createObjectURL(blob);const [from,to]=dateBounds();
+function exportCSV(){const translate=script==='en'?ui:text=>text;const rows=[['内部记录编号','档号','题名／内容','日期原文','日期状态','地点原文','人物原文','团体名称','类别','备注','线上记录','命中来源'].map(translate)];for(const r of filtered)rows.push([r.id,r.order,r.title,r.date,translate(r.time.label),r.place,r.people_raw,r.organizations,r.category,r.note,r.links.map(x=>'https://digicoll.lib.berkeley.edu/record/'+x.id).join(' '),(matches.get(r.id)||[]).map(hit=>hitLabel(hit,translate)).join(script==='en'?' | ':'｜')]);const safe=v=>{let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};const blob=new Blob(['\ufeff'+rows.map(r=>r.map(safe).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});const a=el('a');a.href=URL.createObjectURL(blob);const [from,to]=dateBounds();
  const suffix=timeline.year===null?'当前目录':from===to?to+'年':from+'–'+to+'年累计';
- a.download='致公堂档案_'+suffix+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),60000);}
+ a.download=(script==='en'?'Chee-Kung-Tong-Archive_'+(timeline.year===null?'current-results':from===to?String(to):from+'–'+to+'-cumulative'):'致公堂档案_'+suffix)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),60000);}
 for(const [id,mode] of [['city-tab','city'],['name-tab','name'],['person-tab','person'],['all-tab','all']])$(id).onclick=()=>{S.mode=mode;S.directory='';S.limit=40;$('directory-search').value='';render();};
-$('coverage-note').textContent=ui('索引覆盖 ')+D.source.coverage.records.toLocaleString()+ui(' 条目录记录，其中 ')+D.source.coverage.library_records.toLocaleString()+ui(' 条含馆方著录，')+D.source.coverage.image_excerpt_records.toLocaleString()+ui(' 条含已核查原件片段。');
+function renderCoverage(){const {records,library_records,image_excerpt_records}=D.source.coverage;$('coverage-note').textContent=uiText`索引覆盖 ${records.toLocaleString()} 条目录记录，其中 ${library_records.toLocaleString()} 条含馆方著录，${image_excerpt_records.toLocaleString()} 条含已核查原件片段。`;}
 $('search-scope').onchange=()=>{S.scope=$('search-scope').value;S.page=0;render();};
 $('query').oninput=()=>{S.q=$('query').value;S.page=0;render();};$('directory-search').oninput=()=>{S.directory=$('directory-search').value;S.limit=40;render();};
 for(const id of ['from','to'])$(id).onchange=()=>{const inputs=[$('from'),$('to')];
@@ -430,7 +455,7 @@ if(historyMaps.length){
  const regionLabels={world:'世界','San Francisco Bay Area':'旧金山湾区'};
  function mapOptions(preferred){
   const query=norm(mapQuery.value.trim());
-  const available=historyMaps.filter(m=>norm([m.display_title,m.title,m.region,regionLabels[m.region],m.map_date,m.publication_date,m.period_note,m.list_no,...m.authors].join(' ')).includes(query));
+  const available=historyMaps.filter(m=>norm([m.display_title,english[m.display_title],m.title,m.region,regionLabels[m.region],m.map_date,m.publication_date,m.period_note,m.list_no,...m.authors].join(' ')).includes(query));
   selector.replaceChildren(...available.map(m=>{
    const option=el('option',ui(m.display_title));option.value=m.id;return option;
   }));
@@ -446,10 +471,10 @@ if(historyMaps.length){
   historyCurrent=m;
   if(!m){$('historical-alignment').textContent=ui('没有符合条件的历史参考图。');$('historical-credit').textContent='';return;}
   $('historical-title').textContent=ui(m.display_title);$('historical-metadata').replaceChildren();
-  const box=$('historical-metadata');for(const text of [m.title,ui('制图／出版者：')+m.authors.join('；'),ui('图面标年：')+m.map_date+ui('；出版年：')+m.publication_date,ui(m.period_note),ui('比例尺 ')+m.scale+ui('；馆藏编号 ')+m.list_no,m.catalogue_reference?ui('目录参考：')+m.catalogue_reference:''])if(text)box.append(el('p',text));
+  const box=$('historical-metadata');for(const text of [m.title,ui('制图／出版者：')+m.authors.join(ui('；')),ui('图面标年：')+m.map_date+ui('；出版年：')+m.publication_date,ui(m.period_note),ui('比例尺 ')+m.scale+ui('；馆藏编号 ')+m.list_no,m.catalogue_reference?ui('目录参考：')+m.catalogue_reference:''])if(text)box.append(el('p',text));
   const [from,to]=dateBounds();
   const outside=!overlaps([m.comparison_year,m.comparison_year],from,to);
-  const dateScope=from===null&&to===null?ui('不限年代'):from===to?from+ui(' 年'):(from??ui('不限'))+'—'+(to??ui('不限'))+ui(' 年');
+  const dateScope=from===null&&to===null?ui('不限年代'):from===to?yearLabel(from):yearLabel((from??ui('不限'))+'—'+(to??ui('不限')));
   const sameYear=filtered.filter(r=>timeline.year===null
    ? r.time.intervals.some(range=>overlaps(range,m.comparison_year,m.comparison_year))
    : Boolean(frameDate(r,[m.comparison_year,m.comparison_year]))).length;
@@ -469,11 +494,11 @@ if(historyMaps.length){
  new ResizeObserver(()=>{if($('historical').open)fitHistorical();}).observe($('historical-image'));
 }
 $('interface-script').onchange=e=>{
- script=e.target.value;
- try{localStorage.setItem(storageKey,script);}catch{}
- applyScript();
+ setLanguage(e.target.value);
+ renderCoverage();
  render();
 };
 
+renderCoverage();
 render();
 })();

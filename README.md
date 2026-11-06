@@ -1,19 +1,24 @@
 # Chee Kung Tong Archive · 致公堂档案 (Working Edition)
 
-An independent, offline discovery interface for the Chee Kung Tong Archive at the East Asian Library, UC Berkeley. Search catalogue entries, compare catalogue wording with linked library descriptions and selected source excerpts, and explore city associations by year.
+An independent research catalog for the [Chee Kung Tong Archive](https://digicoll.lib.berkeley.edu/search?cc=Tong+Archive&ln=en), held by the C. V. Starr East Asian Library at the University of California, Berkeley. Search records from the 2024 source workbook, compare them with selected UC Berkeley Library metadata and reviewed digitized excerpts, and explore city associations by year.
+
 The project is created by Green Wang, advised by librarian Jianye He.
 
 ## Open the archive
 
-**[Open the live archive](https://bear1271.github.io/Chee-Kung-Tong-Archive/)**
+**[Open the live catalog](https://bear1271.github.io/Chee-Kung-Tong-Archive/)** · [English](https://bear1271.github.io/Chee-Kung-Tong-Archive/?lang=en)
 
-Clone or download this repository and open [site/dist/index.html](site/dist/index.html) in a browser. On Windows, double-click [Open Archive.cmd](Open%20Archive.cmd). The catalogue and maps are included. Following a link to a library record requires internet access.
+Clone or download this repository and open [site/dist/index.html](site/dist/index.html) in a browser. On Windows, double-click [Open Archive.cmd](Open%20Archive.cmd). The catalog and maps are included. Following a link to a library record requires internet access.
 
-The release contains 5,650 catalogue records. Search supports Chinese character-form matching while preserving archival spellings in record details and CSV. The timeline uses catalogue dates, including uncertain expressions when explicitly selected. Map points represent city-level catalogue associations. The two historical maps are independent reference images.
+The release contains 5,650 catalog records. Search supports Chinese character-form matching while preserving archival spellings in record details and CSV. The timeline uses dates from the source workbook, including uncertain expressions when explicitly selected. Map points represent city associations derived from the workbook. The two historical maps are independent reference images.
+
+Choose English, 简体中文, or 繁體中文 from the language menu. You can open the English interface directly by adding `?lang=en` to the site URL. English CSV exports have English headings and status labels. Titles, names, dates, excerpts, and source filenames are reproduced as recorded.
+
+A catalog number comes from the source workbook and can repeat. A local record ID identifies a single entry in this project. A Digital Collections record ID identifies a library record.
 
 ## Rebuild and verify
 
-The released catalogue and gazetteer payloads are the inputs for the public build. They preserve source wording and stable identifiers. The original source workbook and the internal SQLite editing database are maintained separately. The following commands rebuild and check the public interface from the included data.
+The released catalog and gazetteer payloads are the inputs for the public build. They preserve source wording and stable identifiers. The source workbook and the internal SQLite editing database are maintained separately. The following commands rebuild and check the public interface from the included data.
 
 ```sh
 node scripts/build-site.cjs
@@ -28,7 +33,7 @@ npx playwright install chromium
 npm test
 ```
 
-The browser tests check search, distinct identifiers, source labels, Chinese character forms, map and timeline filters, CSV, and narrow-screen behavior. To verify the optional historical place schema, use Python 3.11 or later with Pydantic 2.
+The browser tests check search, distinct identifiers, source labels, interface languages, map and timeline filters, CSV, and narrow-screen behavior. To verify the optional historical place schema, use Python 3.11 or later with Pydantic 2.
 
 ```sh
 python -m pip install -r requirements.txt
