@@ -1,6 +1,7 @@
 # Chee Kung Tong Archive · 致公堂档案
 
-An independent, offline discovery interface for the Chee Kung Tong Archive. Search catalogue entries, compare catalogue wording with linked library descriptions and selected source excerpts, and explore city associations by year.
+An independent, offline discovery interface for the Chee Kung Tong Archive at the East Asian Library, UC Berkeley. Search catalogue entries, compare catalogue wording with linked library descriptions and selected source excerpts, and explore city associations by year.
+The project is created by Green Wang, advised by librarian Jianye He.
 
 ## Open the archive
 
